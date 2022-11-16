@@ -54,6 +54,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('config', help='Path to .ini config file.')
 parser.add_argument('--experiment', help='Experiment folder name.')
 parser.add_argument('--initmodel', help='Path to folder with model with which to initialize weights.')
+parser.add_argument('--restart', help='Boolean indicating whether to restart an old training job', action='store_true')
 parser.add_argument(
     '--suffix',
     help='Descriptive suffix appended to job name.')
@@ -68,6 +69,7 @@ args = parser.parse_args()
 config_path = args.config
 experiment = args.experiment
 initmodel = args.initmodel
+restart = args.restart
 verbose = args.verbose
 suffix = args.suffix
 debug = args.debug
@@ -150,7 +152,7 @@ with open(summary_file, 'w') as fh:
 
 # Tensorboard
 tb_dir = os.path.join(checkpoint_dir, 'tensorboard/')
-if(initmodel is not None):
+if(restart or initmodel is not None):
     pass
 elif os.path.exists(tb_dir):
     raise ValueError(
@@ -206,6 +208,8 @@ if(debug):
     print('Number of parameters: ' + str(model.count_params()))
 
 # Load pre-trained weights, if specified
+if(restart):
+    initmodel = checkpoint_dir
 if(initmodel is not None):
     ckpt_num = load_model_utils.get_best_ckpt(initmodel)
     ckpt = str(ckpt_num).zfill(4)
