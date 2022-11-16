@@ -116,12 +116,14 @@ def sim_motion(kspace, maps, order_ky, noise_stats=None, max_htrans=0.03, max_vt
     max_vtrans_pix = n_y * max_vtrans
     max_rot_deg = 360 * max_rot
 
-    num_pix[:, 0] = np.random.random(
-        num_points) * (2 * max_htrans_pix) - max_htrans_pix
-    num_pix[:, 1] = np.random.random(
-        num_points) * (2 * max_vtrans_pix) - max_vtrans_pix
+    num_pix[0, :] = np.random.random(2) * (2 * max_htrans_pix) - max_htrans_pix
+    num_pix[1:, 0] = np.random.random(
+        num_points-1) * (2 * max_htrans_pix) - max_htrans_pix + num_pix[0, 0]
+    num_pix[1:, 1] = np.random.random(
+        num_points-1) * (2 * max_vtrans_pix) - max_vtrans_pix + num_pix[0, 1]
 
-    angle = np.random.random(num_points) * (2 * max_rot_deg) - max_rot_deg
+    angle[0] = np.random.random() - 0.5
+    angle[1:] = np.random.random(num_points-1) * (2 * max_rot_deg) - max_rot_deg + angle[0]
 
     n_shots = 6
     shot_angle = np.zeros((1,n_shots))
