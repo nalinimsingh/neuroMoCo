@@ -2,7 +2,7 @@ from random import sample, shuffle
 from scipy import ndimage, interpolate
 from tqdm import tqdm
 import csv
-import diff_forward_model
+import diff_forward_model, nufft_moco
 import multiprocessing
 import numpy as np
 import os
@@ -12,6 +12,9 @@ from pydicom import read_file
 from interlacer import utils
 import diff_forward_model
 import mrimotion as mot
+import mghGErecon as ge
+
+N_SHOTS = 6
 
 def get_edge_multiplier(shape):
     rows = np.zeros(shape).T
@@ -92,7 +95,7 @@ def remove_edge(img_recon,maps):
     return fill_img_recon
 
 
-def sim_motion(kspace, maps, order_ky, noise_stats=None, max_htrans=0.03, max_vtrans=0.03, max_rot=0.03):
+def sim_motion(kspace, maps, order_ky, noise_stats=None, max_htrans=0.03, max_vtrans=0.03, max_rot=0.125):
     kspace_shift = np.fft.ifftshift(kspace,axes=(0,1))
     img_slice = np.fft.fftshift(np.fft.ifftn(kspace_shift,axes=(0,1)),axes=(0,1))
     img_recon = np.expand_dims(np.sqrt(np.sum(np.square(np.abs(img_slice)), axis=2)),0)
@@ -196,7 +199,7 @@ def generate_motion_corrupted_brain_data(scan_list_path, maps_dir, write_path):
                     file_2d_acqorder = os.path.join(acq_path, 'loopcounters.npz')
                     order_ky, _, _ = mot.acqorder.get_segments(file_2d_acqorder, show_plots=False)
                     order_ky = [order.astype('int32')-1 for order in order_ky]
-                    if(len(order_ky)!=6):
+                    if(len(order_ky)!=N_SHOTS):
                         continue
 
                     res_info = np.load(os.path.join(acq_path,'resolutioninfo.npz'))
@@ -209,15 +212,49 @@ def generate_motion_corrupted_brain_data(scan_list_path, maps_dir, write_path):
                     k_corrupt = np.expand_dims(k_corrupt, 0)
                     k_true = np.expand_dims(k_true, 0)
 
+                    shot_angle = np.zeros((1,N_SHOTS))
+                    shot_num_pix = np.zeros((1,N_SHOTS,2))
+
+                    shot_true = -1
+                    for shot_i,shot in enumerate(order_ky):
+                        if(int(k_corrupt.shape[2]/2) in shot):
+                            shot_true = shot_i
+
+                    shot_w_motion = motion_shots[1]
+
+                    # Compute angles relative to position at central line
+                    if(shot_w_motion>shot_true):
+                        rel_angle = angle - angle[0,0]
+                        rel_num_pix = num_pix - num_pix[0,0,:]
+                    else:
+                        rel_angle = angle - angle[0,1]
+                        rel_num_pix = num_pix - num_pix[0,1,:]
+
+                    shot_order_shape = k_corrupt.shape + (6,)
+                    shot_order_ky = np.zeros(shot_order_shape)
+                    for shot_i,shot in enumerate(order_ky):
+                        shot_order_ky[:,:,shot,:,shot_i] = 1.0
+
+                    mapses = np.expand_dims(ext_maps,0)
+                    k_grappa = ge.recon.recon_arc_kspace(utils.join_reim_channels(tf.convert_to_tensor(k_corrupt))[0,...],acq_path)
+                    k_grappa = utils.split_reim_channels(tf.expand_dims(k_grappa,0))
+                    
+                    k_nufft = nufft_moco.nufft_moco(k_grappa, mapses, shot_order_ky, rel_angle, rel_num_pix, use_grappa_interp=True)                    
+
                     # Write files
                     np.savez(fname,
                              k_corrupt=k_corrupt,
                              k_true = k_true,
+                             k_grappa = k_grappa,
+                             k_nufft = k_nufft,
                              maps = ext_maps,
                              order_ky = order_ky,
+                             shot_order_ky = shot_order_ky,
                              motion_shots = motion_shots,
                              num_pix = num_pix,
+                             rel_num_pix = rel_num_pix,
                              angle = angle,
+                             rel_angle = rel_angle,
                              psx = psx,
                              psy = psy)
 
