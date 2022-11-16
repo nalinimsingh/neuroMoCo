@@ -76,8 +76,7 @@ exp_config = training_config.TrainingConfig(config_path)
 exp_config.read_config()
 
 # Load dataset
-
-base_data_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_tf_v1_dropoffsensmap'
+base_data_dir = exp_config.data_path
 
 train_dir = os.path.join(base_data_dir,'train')
 val_dir = os.path.join(base_data_dir,'val')
@@ -135,7 +134,7 @@ checkpoint_path = os.path.join(checkpoint_dir, checkpoint_name)
 if not os.path.exists(checkpoint_dir):
     os.makedirs(checkpoint_dir)
 cp_callback = keras.callbacks.ModelCheckpoint(
-    checkpoint_path, verbose=1, save_weights_only=True, period=10)
+    checkpoint_path, verbose=1, save_weights_only=True, save_freq=50*100)
 print('Set up checkpointing')
 
 if(debug):
@@ -220,8 +219,8 @@ if(debug):
     val_steps = 1
 else:
     num_epochs = exp_config.num_epochs
-    steps_per_epoch = 10
-    val_steps = 8
+    steps_per_epoch = 50
+    val_steps = 50
 
 if(initmodel is not None):
     init_epoch = ckpt_num
@@ -240,4 +239,6 @@ model.fit_generator(
         tb_callback,
         reduce_lr],
     verbose=2,
-    workers=1)
+    workers=1,
+    max_queue_size=10,
+    use_multiprocessing=False)
