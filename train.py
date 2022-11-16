@@ -27,10 +27,10 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 
-import fastmri_data_generator, filepaths, losses, models, multicoil_motion_simulator
+import fastmri_data_generator, filepaths, losses, models, multicoil_motion_simulator, training_config
 from interlacer import (layers, utils)
 from interlacer import losses as int_losses
-from scripts import (load_model_utils, training_config)
+from scripts import load_model_utils
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.5)
@@ -83,40 +83,21 @@ base_data_dir = exp_config.data_path
 train_dir = os.path.join(base_data_dir,'train')
 val_dir = os.path.join(base_data_dir,'val')
 
-train_generator= multicoil_motion_simulator.generate_single_saved_motion_examples(train_dir,exp_config.num_epochs,exp_config.batch_size,exp_config.hyp_model,exp_config.output_domain,exp_config.enforce_dc)
+train_data = multicoil_motion_simulator.MoCoDataSequence(train_dir,exp_config.batch_size,exp_config.hyp_model,exp_config.output_domain,exp_config.enforce_dc,exp_config.use_gt_params,exp_config.input_type)
+val_data = multicoil_motion_simulator.MoCoDataSequence(val_dir,exp_config.batch_size,exp_config.hyp_model,exp_config.output_domain,exp_config.enforce_dc,exp_config.use_gt_params,exp_config.input_type)
 
-val_generator = multicoil_motion_simulator.generate_single_saved_motion_examples(val_dir,exp_config.num_epochs,exp_config.batch_size,exp_config.hyp_model,exp_config.output_domain,exp_config.enforce_dc)
+input_shape = (None,None,2*exp_config.num_coils)
+model = models.get_motion_estimation_model(input_shape,
+        exp_config.kernel_size,
+        exp_config.num_features,
+        exp_config.num_convs,
+        exp_config.num_layers,
+        exp_config.num_coils,
+        hyp_model=exp_config.hyp_model,
+        output_domain=exp_config.output_domain,
+        data_consistency=exp_config.enforce_dc,
+        use_gt_params=exp_config.use_gt_params)
 
-if(exp_config.hyp_model):
-    model = models.get_motion_estimation_model((None,None,2*exp_config.num_coils),
-            exp_config.nonlinearity,
-            exp_config.kernel_size,
-            exp_config.num_features,
-            exp_config.num_convs,
-            exp_config.num_layers,
-            exp_config.num_coils,
-            exp_config.hyp_model,
-            exp_config.output_domain,
-            exp_config.enforce_dc)
-elif(exp_config.architecture == 'INTERLACER_RESIDUAL'):
-    model = models.get_multicoil_interlacer_model((None,None,2*exp_config.num_coils),
-            exp_config.nonlinearity,
-            exp_config.kernel_size,
-            exp_config.num_features,
-            exp_config.num_convs,
-            exp_config.num_layers,
-            exp_config.num_coils,
-            exp_config.hyp_model,
-            exp_config.output_domain)
-elif(exp_config.architecture == 'CONV_RESIDUAL'):
-    model = models.get_multicoil_conv_model((None,None,2*exp_config.num_coils),
-            exp_config.nonlinearity,
-            exp_config.kernel_size,
-            exp_config.num_features,
-            exp_config.num_layers,
-            exp_config.num_coils)
-else:
-    raise ValueError('This model not supported for multicoil data.')
 print('Set up model')
 
 # Checkpointing
@@ -231,12 +212,12 @@ if(initmodel is not None):
 else:
     init_epoch = 0
 
-model.fit_generator(
-    train_generator,
+model.fit(
+    train_data,
     epochs=num_epochs,
     steps_per_epoch = steps_per_epoch,
     initial_epoch=init_epoch,
-    validation_data=val_generator,
+    validation_data=val_data,
     validation_steps=val_steps,
     callbacks=[
         cp_callback,

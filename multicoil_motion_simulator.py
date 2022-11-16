@@ -260,7 +260,7 @@ def generate_motion_corrupted_brain_data(scan_list_path, maps_dir, write_path):
 
 
 def generate_all_motion_splits():
-    base_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_tf_v1_dropoffsensmap_fullysampled'
+    base_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_mediummotions'
     split_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/data_splits_rl'
     maps_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_v1_multisim'
 
@@ -269,31 +269,27 @@ def generate_all_motion_splits():
                 os.path.join(maps_dir,split),
                 os.path.join(base_dir,split))
 
-def generate_single_saved_motion_examples(ex_dir, num_epochs, batch_size,
-        hyper_model=False, output_domain='FREQ', enforce_dc=False):
-    dir_list = os.listdir(ex_dir)
-    shuffle(dir_list)
+class MoCoDataSequence(tf.keras.utils.Sequence):
+    def __init__(self, ex_dir, batch_size, hyper_model=False, output_domain='FREQ', enforce_dc=False,
+        use_gt_params=False, input_type = 'RAW'):
+        self.ex_dir = ex_dir
+        self.batch_size = batch_size
+        self.hyper_model = hyper_model
+        self.output_domain = output_domain
+        self.enforce_dc = enforce_dc
+        self.use_gt_params = use_gt_params
+        self.input_type = input_type
 
+        dir_list = os.listdir(self.ex_dir)
     dir_list = [ex for ex in dir_list if ex[-4:]=='.npz']
 
-    i = 0
-    while True:
-        if(i==len(dir_list)):
-            shuffle(dir_list)
-            i=0
-
-        ex = dir_list[i]
-        i+=1
-
-        if(ex[-4:]=='.npz'):
-            # Get adjacent slices
+        sl_dict = {}
+        for ex in dir_list:
             sl = int(ex.split('.')[0].split('_')[3])
             sim = int(ex.split('sim')[1][:-4])
             scan_data = ex.split('.')[0].split('_')[:3]
-
             sl_files = [ex]
-
-            for _ in range(batch_size-1):
+            for _ in range(self.batch_size-1):
                 sl = sl+1
 
                 next_sl_str = '_'
@@ -301,94 +297,93 @@ def generate_single_saved_motion_examples(ex_dir, num_epochs, batch_size,
                 next_sl_str += '_'+str(sl)+'_sim'+str(sim)+'.npz'
                 sl_files.append(next_sl_str)
 
-            k_corrupts = []
-            k_trues = []
-
-            order_kys = []
-            angles = []
-            num_pixes = []
-            mapses = []
-            norms = []
-
             if(all([sl in dir_list for sl in sl_files])):
-                for sl in sl_files:
-                    if sl in dir_list:
+                sl_dict[ex] = sl_files
 
-                        ex_arch = np.load(os.path.join(ex_dir, sl), allow_pickle=True)
+        self.sl_dict = sl_dict
+        self.sl_dict_inds = list(self.sl_dict.keys())
 
-                        if(len(ex_arch['order_ky'])!=6):
+    def __len__(self):
+        return len(self.sl_dict_inds)
+
+    def on_epoch_end(self):
+        shuffle(self.sl_dict_inds)
+
+    def __getitem__(self, idx, sl=None):
+        if(sl):
+            sl_files = [sl]
+        else:
+            ex = self.sl_dict_inds[idx]
+            sl_files = self.sl_dict[ex]
+        
+        for i,sl in enumerate(sl_files):
+            ex_arch = np.load(os.path.join(self.ex_dir, sl), allow_pickle=True)
+
+            if(len(ex_arch['order_ky'])!=N_SHOTS):
                             continue
 
                         k_corrupt = ex_arch['k_corrupt']
-                        k_true = ex_arch['k_true']
-
                         norm = np.max(diff_forward_model.rss_image_from_multicoil_k(k_corrupt[0,:,:,:]).numpy().flatten())
-                        k_corrupt /= norm
-                        k_true /= norm
-                        norms.append(np.reshape(np.array(norm),(1,1)))
 
-                        k_corrupts.append(k_corrupt)
-                        k_trues.append(k_true)
+            # Initialize appropriately shaped array in the first iteration, for time savings
+            if(i == 0):
+                k_corrupts = np.empty((self.batch_size,)+k_corrupt.shape[1:], dtype='float32')
+                k_trues = np.empty(k_corrupts.shape, dtype='float32')
+                k_grappas = np.empty(k_corrupts.shape, dtype='float32')
+                k_nuffts = np.empty(k_corrupts.shape, dtype='float32')
 
+                order_kys = np.empty(k_corrupts.shape+(N_SHOTS,), dtype='float64')
+                angles = np.empty((self.batch_size,N_SHOTS), dtype='float64')
+                num_pixes = np.empty((self.batch_size,N_SHOTS,2), dtype='float64')
+                mapses = np.empty(k_corrupts.shape[:-1]+(int(k_corrupts.shape[-1]/2),), dtype='complex64')
+                norms = np.empty((self.batch_size,1), dtype='float32')
 
-                        angle = ex_arch['angle']
-                        num_pix = ex_arch['num_pix']
+            k_corrupts[i,...] = k_corrupt/norm
+            k_trues[i,...] = ex_arch['k_true']/norm
+            norms[i,...] = np.reshape(np.array(norm),(1,1))
+
+            if(self.input_type == 'GRAPPA'):
+                k_grappas[i,...] = ex_arch['k_grappa']/norm
+            if(self.input_type == 'NUFFT'):
+                k_nuffts[i,...] = ex_arch['k_nufft']/norm
+            maps = ex_arch['maps']
+            mapses[i,...] = np.expand_dims(maps,0)
+
                         order_ky = ex_arch['order_ky']
-                        motion_shots = ex_arch['motion_shots']
+            shot_order_shape = k_corrupt.shape + (N_SHOTS,)
+            shot_order_ky = np.zeros(shot_order_shape)
+            for shot_i,shot in enumerate(order_ky):
+                order_kys[i,:,shot,:,shot_i] = 1.0
 
-                        maps = ex_arch['maps']
+            num_pixes[i,...] = ex_arch['rel_num_pix']
+            angles[i,...] = ex_arch['rel_angle']
 
-                        psx = ex_arch['psx']
-                        psy = ex_arch['psy']
+        if(not(np.sum(np.isnan(k_corrupts)) or np.sum(np.isnan(k_trues)))):
+            if(self.input_type == 'RAW'):
+                k_in = k_corrupts
+            elif(self.input_type == 'GRAPPA'):
+                k_in = k_grappas
+            elif(self.input_type == 'NUFFT'):
+                k_in = k_nuffts
 
-                        n_shots = 6
-                        shot_angle = np.zeros((1,n_shots))
-                        shot_num_pix = np.zeros((1,n_shots,2))
+            if(self.output_domain=='FREQ'):
+                inputs = {'k_in': k_in}
 
-                        shot_true = -1
-                        for shot_i,shot in enumerate(order_ky):
-                            if(int(k_corrupt.shape[2]/2) in shot):
-                                shot_true = shot_i
+                if(self.use_gt_params):
+                    inputs['angles'] = angles
+                    inputs['num_pixes'] = num_pixes
 
-                        shot_w_motion = motion_shots[1]
+                outputs = {'k_true': k_trues}
+                outputs['angle_true'] = angles
+                outputs['num_pix_true'] = num_pixes
+                outputs['k_corrupt'] = k_corrupts
 
-                        # Compute angles relative to position at central line
-                        if(shot_w_motion>shot_true):
-                            rel_angle = angle - angle[0,0]
-                            rel_num_pix = num_pix - num_pix[0,0,:]
-                        else:
-                            rel_angle = angle - angle[0,1]
-                            rel_num_pix = num_pix - num_pix[0,1,:]
+                outputs['mapses'] = mapses
+                outputs['order_kys'] = order_kys
+                outputs['norms'] = norms
+                outputs['sl'] = sl
 
-                        shot_order_shape = k_corrupt.shape + (6,)
-                        shot_order_ky = np.zeros(shot_order_shape)
-                        for shot_i,shot in enumerate(order_ky):
-                            shot_order_ky[:,:,shot,:,shot_i] = 1.0
-
-
-                        order_kys.append(shot_order_ky)
-                        angles.append(rel_angle)
-                        num_pixes.append(rel_num_pix)
-                        mapses.append(np.expand_dims(maps,0))
-
-                k_corrupt = np.concatenate(k_corrupts,axis=0)
-                k_true = np.concatenate(k_trues,axis=0)
-
-                order_kys = np.concatenate(order_kys,axis=0)
-                angles = np.concatenate(angles,axis=0)
-                num_pixes = np.concatenate(num_pixes,axis=0)
-                mapses = np.concatenate(mapses,axis=0)
-
-                norms = np.concatenate(norms,axis=0)
-                img_corrupt = utils.convert_channels_to_image_domain(tf.convert_to_tensor(k_corrupt))
-                img_true = utils.convert_channels_to_image_domain(tf.convert_to_tensor(k_true))
-
-                if(not(np.sum(np.isnan(k_corrupt)) or np.sum(np.isnan(k_true)))):
-                    if(output_domain=='FREQ'):
-                        if(enforce_dc):
-                            yield((k_corrupt, mapses, order_kys, norms), (k_true, angles, num_pixes))
-                        else:
-                            yield(k_corrupt,k_true)
+                return(inputs,outputs)
 
 
 
