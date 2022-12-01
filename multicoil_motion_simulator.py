@@ -281,7 +281,7 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
         self.input_type = input_type
 
         dir_list = os.listdir(self.ex_dir)
-    dir_list = [ex for ex in dir_list if ex[-4:]=='.npz']
+        dir_list = [ex for ex in dir_list if ex[-4:]=='.npz']
 
         sl_dict = {}
         for ex in dir_list:
@@ -320,10 +320,10 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
             ex_arch = np.load(os.path.join(self.ex_dir, sl), allow_pickle=True)
 
             if(len(ex_arch['order_ky'])!=N_SHOTS):
-                            continue
+                continue
 
-                        k_corrupt = ex_arch['k_corrupt']
-                        norm = np.max(diff_forward_model.rss_image_from_multicoil_k(k_corrupt[0,:,:,:]).numpy().flatten())
+            k_corrupt = ex_arch['k_corrupt']
+            norm = np.max(diff_forward_model.rss_image_from_multicoil_k(k_corrupt[0,:,:,:]).numpy().flatten())
 
             # Initialize appropriately shaped array in the first iteration, for time savings
             if(i == 0):
@@ -349,7 +349,7 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
             maps = ex_arch['maps']
             mapses[i,...] = np.expand_dims(maps,0)
 
-                        order_ky = ex_arch['order_ky']
+            order_ky = ex_arch['order_ky']
             shot_order_shape = k_corrupt.shape + (N_SHOTS,)
             shot_order_ky = np.zeros(shot_order_shape)
             for shot_i,shot in enumerate(order_ky):
