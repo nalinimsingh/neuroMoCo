@@ -271,7 +271,7 @@ def generate_all_motion_splits():
 
 class MoCoDataSequence(tf.keras.utils.Sequence):
     def __init__(self, ex_dir, batch_size, hyper_model=False, output_domain='FREQ', enforce_dc=False,
-        use_gt_params=False, input_type = 'RAW'):
+        use_gt_params=False, input_type = 'RAW', return_dc_info = False):
         self.ex_dir = ex_dir
         self.batch_size = batch_size
         self.hyper_model = hyper_model
@@ -279,7 +279,8 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
         self.enforce_dc = enforce_dc
         self.use_gt_params = use_gt_params
         self.input_type = input_type
-
+        self.return_dc_info = return_dc_info
+        
         dir_list = os.listdir(self.ex_dir)
         dir_list = [ex for ex in dir_list if ex[-4:]=='.npz']
 
@@ -332,28 +333,31 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
                 k_grappas = np.empty(k_corrupts.shape, dtype='float32')
                 k_nuffts = np.empty(k_corrupts.shape, dtype='float32')
 
-                order_kys = np.empty(k_corrupts.shape+(N_SHOTS,), dtype='float64')
                 angles = np.empty((self.batch_size,N_SHOTS), dtype='float64')
                 num_pixes = np.empty((self.batch_size,N_SHOTS,2), dtype='float64')
-                mapses = np.empty(k_corrupts.shape[:-1]+(int(k_corrupts.shape[-1]/2),), dtype='complex64')
-                norms = np.empty((self.batch_size,1), dtype='float32')
+                if(self.return_dc_info):
+                    order_kys = np.empty(k_corrupts.shape+(N_SHOTS,), dtype='float64')
+                    mapses = np.empty(k_corrupts.shape[:-1]+(int(k_corrupts.shape[-1]/2),), dtype='complex64')
+                    norms = np.empty((self.batch_size,1), dtype='float32')
 
             k_corrupts[i,...] = k_corrupt/norm
             k_trues[i,...] = ex_arch['k_true']/norm
-            norms[i,...] = np.reshape(np.array(norm),(1,1))
 
             if(self.input_type == 'GRAPPA'):
                 k_grappas[i,...] = ex_arch['k_grappa']/norm
             if(self.input_type == 'NUFFT'):
                 k_nuffts[i,...] = ex_arch['k_nufft']/norm
-            maps = ex_arch['maps']
-            mapses[i,...] = np.expand_dims(maps,0)
 
-            order_ky = ex_arch['order_ky']
-            shot_order_shape = k_corrupt.shape + (N_SHOTS,)
-            shot_order_ky = np.zeros(shot_order_shape)
-            for shot_i,shot in enumerate(order_ky):
-                order_kys[i,:,shot,:,shot_i] = 1.0
+            if(self.return_dc_info):
+                maps = ex_arch['maps']
+                mapses[i,...] = np.expand_dims(maps,0)
+                norms[i,...] = np.reshape(np.array(norm),(1,1))
+
+                order_ky = ex_arch['order_ky']
+                shot_order_shape = k_corrupt.shape + (N_SHOTS,)
+                shot_order_ky = np.zeros(shot_order_shape)
+                for shot_i,shot in enumerate(order_ky):
+                    order_kys[i,:,shot,:,shot_i] = 1.0
 
             num_pixes[i,...] = ex_arch['rel_num_pix']
             angles[i,...] = ex_arch['rel_angle']
@@ -378,10 +382,11 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
                 outputs['num_pix_true'] = num_pixes
                 outputs['k_corrupt'] = k_corrupts
 
-                outputs['mapses'] = mapses
-                outputs['order_kys'] = order_kys
-                outputs['norms'] = norms
-                outputs['sl'] = sl
+                if(self.return_dc_info):
+                    outputs['mapses'] = mapses
+                    outputs['order_kys'] = order_kys
+                    outputs['norms'] = norms
+                    outputs['sl'] = sl
 
                 return(inputs,outputs)
 
