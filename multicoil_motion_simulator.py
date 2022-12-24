@@ -95,7 +95,7 @@ def remove_edge(img_recon,maps):
     return fill_img_recon
 
 
-def sim_motion(kspace, maps, order_ky, noise_stats=None, max_htrans=0.03, max_vtrans=0.03, max_rot=0.125):
+def sim_motion(kspace, maps, order_ky, noise_stats=None, max_htrans=0.03, max_vtrans=0.03, max_rot=0.03):
     kspace_shift = np.fft.ifftshift(kspace,axes=(0,1))
     img_slice = np.fft.fftshift(np.fft.ifftn(kspace_shift,axes=(0,1)),axes=(0,1))
     img_recon = np.expand_dims(np.sqrt(np.sum(np.square(np.abs(img_slice)), axis=2)),0)
@@ -260,7 +260,7 @@ def generate_motion_corrupted_brain_data(scan_list_path, maps_dir, write_path):
 
 
 def generate_all_motion_splits():
-    base_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_mediummotions'
+    base_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_smallmotions'
     split_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/data_splits_rl'
     maps_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_v1_multisim'
 
