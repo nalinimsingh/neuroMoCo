@@ -48,7 +48,7 @@ def transform(sl, affine_mat):
     sl = tf.pad(sl, [[dx, dx], [dy, dy], [0,0]],mode='REFLECT')
     sl = tf.expand_dims(sl,0)
     sl.set_shape((None,n,n,2))
-    sl_moved = vxm.layers.SpatialTransformer(interp_method='nearest',fill_value=None)([sl,affine_mat])
+    sl_moved = vxm.layers.SpatialTransformer(interp_method='linear',fill_value=None)([sl,affine_mat])
     sl_moved = tf.slice(sl_moved, (0, dx, dy, 0), (-1, x, y, 2))[0,...]
 
     return sl_moved
