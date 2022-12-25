@@ -43,7 +43,6 @@ def get_multicoil_interlacer_model(
       num_coils(int): Number of coils in k-space data
       hyp_model(Bool): Whether to use a hypernetwork controlled by motion params
       n_units(int): Number of units in the intermediate layers of hypernetwork MLP
-      enforce_dc(Bool): Whether to paste in original acquired k-space lines in final output
 
     Returns:
       model: Keras model comprised of num_layers core interlaced layers with specified nonlinearities
@@ -107,10 +106,9 @@ def get_multicoil_interlacer_model(
 
 
 class CustomModel(keras.Model):
-    def __init__(self, hyp_model, enforce_dc, use_gt_params, *args, **kwargs):
+    def __init__(self, hyp_model, use_gt_params, *args, **kwargs):
         super(CustomModel, self).__init__(*args, **kwargs)
         self.hyp_model = hyp_model
-        self.enforce_dc = enforce_dc
         self.use_gt_params = use_gt_params
     
     @tf.function
@@ -121,26 +119,13 @@ class CustomModel(keras.Model):
         angle_true = outputs['angle_true']
         num_pix_true = outputs['num_pix_true']
         k_corrupt = outputs['k_corrupt']
-        #mapses = outputs['mapses']
-        #order_kys = outputs['order_kys']
-        #norms = outputs['norms']
-        
-        #mapses.set_shape((None,None,None,44))
         k_corrupt.set_shape((None,None,None,44*2))
 
         model_outputs = self(inputs, training=training)      
         
         k_pred = model_outputs['k_pred']
         ssim_loss = tf.reduce_mean(losses.multicoil_ssim('FREQ', 44)(k_true, k_pred))
-        
-        #imgs = tf.map_fn(diff_forward_model.rss_image_from_multicoil_k, k_pred)[..., 0]
-        #elems = [utils.split_reim_tensor(imgs),mapses,order_kys,angle_true,num_pix_true,norms]
-        #map_dfm = (lambda x: diff_forward_model.add_rotation_and_translations(x[0], x[1], x[2], x[3], x[4], x[5]))
-
-        #forward, _ = tf.map_fn(map_dfm, elems, fn_output_signature=(tf.float32, tf.float32))
-
-        dc_loss = None#1e-9*tf.reduce_mean(tf.reduce_sum(tf.square(tf.abs(utils.join_reim_channels(forward) - utils.join_reim_channels(k_corrupt))),axis=(1,2,3)),axis=0)
-        
+                    
         if(self.hyp_model and not self.use_gt_params):
             angle_pred = model_outputs['angles']
             num_pix_pred = model_outputs['num_pixes']
@@ -151,16 +136,13 @@ class CustomModel(keras.Model):
             rot_loss = 0
             trans_loss = 0
 
-        return ssim_loss, dc_loss, rot_loss, trans_loss
+        return ssim_loss, rot_loss, trans_loss
 
     @tf.function
     def train_step(self, data):
         with tf.GradientTape() as tape:
-            ssim_loss, dc_loss, rot_loss, trans_loss = self.compute_losses(data, training=True)
+            ssim_loss, rot_loss, trans_loss = self.compute_losses(data, training=True)
             loss = ssim_loss
-            
-            if(self.enforce_dc):
-                loss += dc_loss
                 
             if(self.hyp_model and not self.use_gt_params):
                 loss += rot_loss + trans_loss
@@ -175,17 +157,13 @@ class CustomModel(keras.Model):
         return {
             "loss": loss,
             "image_ssim_multicoil": ssim_loss,
-            "dc": dc_loss,
             "rot": rot_loss,
             "trans": trans_loss}
     
     @tf.function
     def test_step(self, data, training=False):
-        ssim_loss, dc_loss, rot_loss, trans_loss = self.compute_losses(data, training=False)
+        ssim_loss, rot_loss, trans_loss = self.compute_losses(data, training=False)
         loss = ssim_loss
-
-        if(self.enforce_dc):
-            loss += dc_loss
 
         if(self.hyp_model and not self.use_gt_params):
             loss += rot_loss + trans_loss
@@ -194,7 +172,6 @@ class CustomModel(keras.Model):
         return {
             "loss": loss,
             "image_ssim_multicoil": ssim_loss,
-            "dc": dc_loss,
             "rot": rot_loss,
             "trans": trans_loss}
 
@@ -209,7 +186,6 @@ def get_motion_estimation_model(
         n_units=256,
         hyp_model=False,
         output_domain='FREQ',
-        data_consistency=False,
         use_gt_params=False):
 
     inputs = Input(input_size, name = 'k_in')
@@ -290,6 +266,6 @@ def get_motion_estimation_model(
         outputs['angles'] = angle_pred
         outputs['num_pixes'] = num_pix_pred
     
-    model = CustomModel(hyp_model, data_consistency, use_gt_params, inputs=inputs, outputs=outputs)
+    model = CustomModel(hyp_model, use_gt_params, inputs=inputs, outputs=outputs)
 
     return model

@@ -95,7 +95,6 @@ model = models.get_motion_estimation_model(input_shape,
         exp_config.num_coils,
         hyp_model=exp_config.hyp_model,
         output_domain=exp_config.output_domain,
-        data_consistency=exp_config.enforce_dc,
         use_gt_params=exp_config.use_gt_params)
 
 print('Set up model')
