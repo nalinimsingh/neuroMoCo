@@ -271,7 +271,7 @@ def generate_all_motion_splits():
 
 class MoCoDataSequence(tf.keras.utils.Sequence):
     def __init__(self, ex_dir, batch_size, hyper_model=False, output_domain='FREQ', enforce_dc=False,
-        use_gt_params=False, input_type = 'RAW', return_dc_info = False):
+        use_gt_params=False, input_type = 'RAW', return_dc_info = False, load_all_inputs=False):
         self.ex_dir = ex_dir
         self.batch_size = batch_size
         self.hyper_model = hyper_model
@@ -280,6 +280,7 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
         self.use_gt_params = use_gt_params
         self.input_type = input_type
         self.return_dc_info = return_dc_info
+        self.load_all_inputs = load_all_inputs
         
         dir_list = os.listdir(self.ex_dir)
         dir_list = [ex for ex in dir_list if ex[-4:]=='.npz']
@@ -343,9 +344,9 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
             k_corrupts[i,...] = k_corrupt/norm
             k_trues[i,...] = ex_arch['k_true']/norm
 
-            if(self.input_type == 'GRAPPA'):
+            if(self.input_type == 'GRAPPA' or self.load_all_inputs):
                 k_grappas[i,...] = ex_arch['k_grappa']/norm
-            if(self.input_type == 'NUFFT'):
+            if(self.input_type == 'NUFFT' or self.load_all_inputs):
                 k_nuffts[i,...] = ex_arch['k_nufft']/norm
 
             if(self.return_dc_info):
@@ -376,6 +377,13 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
                 if(self.use_gt_params):
                     inputs['angles'] = angles
                     inputs['num_pixes'] = num_pixes
+
+            if(self.load_all_inputs):
+                inputs['k_grappa'] = k_grappas
+                inputs['k_nufft'] = k_nuffts
+
+            inputs['psx'] = ex_arch['psx']
+            inputs['psy'] = ex_arch['psy']
 
                 outputs = {'k_true': k_trues}
                 outputs['angle_true'] = angles
