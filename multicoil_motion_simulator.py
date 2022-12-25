@@ -271,7 +271,7 @@ def generate_all_motion_splits():
 
 class MoCoDataSequence(tf.keras.utils.Sequence):
     def __init__(self, ex_dir, batch_size, hyper_model=False, output_domain='FREQ', enforce_dc=False,
-        use_gt_params=False, input_type = 'RAW', return_dc_info = False, load_all_inputs=False):
+        use_gt_params=False, input_type = 'RAW', load_all_inputs=False):
         self.ex_dir = ex_dir
         self.batch_size = batch_size
         self.hyper_model = hyper_model
@@ -279,7 +279,6 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
         self.enforce_dc = enforce_dc
         self.use_gt_params = use_gt_params
         self.input_type = input_type
-        self.return_dc_info = return_dc_info
         self.load_all_inputs = load_all_inputs
         
         dir_list = os.listdir(self.ex_dir)
@@ -336,7 +335,7 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
 
                 angles = np.empty((self.batch_size,N_SHOTS), dtype='float64')
                 num_pixes = np.empty((self.batch_size,N_SHOTS,2), dtype='float64')
-                if(self.return_dc_info):
+                if(self.enforce_dc):
                     order_kys = np.empty(k_corrupts.shape+(N_SHOTS,), dtype='float64')
                     mapses = np.empty(k_corrupts.shape[:-1]+(int(k_corrupts.shape[-1]/2),), dtype='complex64')
                     norms = np.empty((self.batch_size,1), dtype='float32')
@@ -349,7 +348,7 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
             if(self.input_type == 'NUFFT' or self.load_all_inputs):
                 k_nuffts[i,...] = ex_arch['k_nufft']/norm
 
-            if(self.return_dc_info):
+            if(self.enforce_dc):
                 maps = ex_arch['maps']
                 mapses[i,...] = np.expand_dims(maps,0)
                 norms[i,...] = np.reshape(np.array(norm),(1,1))
@@ -390,7 +389,7 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
                 outputs['num_pix_true'] = num_pixes
                 outputs['k_corrupt'] = k_corrupts
 
-                if(self.return_dc_info):
+            if(self.enforce_dc):
                     outputs['mapses'] = mapses
                     outputs['order_kys'] = order_kys
                     outputs['norms'] = norms
