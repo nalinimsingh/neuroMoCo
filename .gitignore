@@ -1,0 +1,17 @@
+configs/*
+training/*
+training_BACKUP/*
+OLD-configs/*
+OLD-training/*
+data/*
+*.pyc
+*.ipynb
+*.h5
+*.npz
+*.csv
+*.png
+*.gif
+*.data
+*.cfg
+*.txt.*
+.nfsc*
