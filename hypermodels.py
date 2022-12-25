@@ -11,8 +11,7 @@ def get_motion_hypernetwork(input_shape = [18], n_layers=6, n_units=256):
     horizontal and vertical translation, and a counterclockwise rotation.  """
 
     hyp_input = tf.keras.Input(shape=input_shape, name='hyp_input')
-    hyp_input_encode = Concatenate()([tf.sin(hyp_input*tf.constant(math.pi)),tf.cos(hyp_input*tf.constant(math.pi))])
-    hyp_last = hyp_input_encode
+    hyp_last = hyp_input
 
     for n in range(n_layers):
         if(n==n_layers-1):
