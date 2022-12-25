@@ -373,9 +373,9 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
             if(self.output_domain=='FREQ'):
                 inputs = {'k_in': k_in}
 
-                if(self.use_gt_params):
-                    inputs['angles'] = angles
-                    inputs['num_pixes'] = num_pixes
+            if(self.use_gt_params):
+                inputs['angles'] = angles
+                inputs['num_pixes'] = num_pixes
 
             if(self.load_all_inputs):
                 inputs['k_grappa'] = k_grappas
@@ -384,19 +384,44 @@ class MoCoDataSequence(tf.keras.utils.Sequence):
             inputs['psx'] = ex_arch['psx']
             inputs['psy'] = ex_arch['psy']
 
-                outputs = {'k_true': k_trues}
-                outputs['angle_true'] = angles
-                outputs['num_pix_true'] = num_pixes
-                outputs['k_corrupt'] = k_corrupts
+            outputs = {'k_true': k_trues}
+            outputs['angle_true'] = angles
+            outputs['num_pix_true'] = num_pixes
+            outputs['k_corrupt'] = k_corrupts
 
             if(self.enforce_dc):
-                    outputs['mapses'] = mapses
-                    outputs['order_kys'] = order_kys
-                    outputs['norms'] = norms
-                    outputs['sl'] = sl
+                outputs['mapses'] = mapses
+                outputs['order_kys'] = order_kys
+                outputs['norms'] = norms
+                outputs['sl'] = sl
 
-                return(inputs,outputs)
+            return(inputs,outputs)
 
+def MoCoDataGenerator(ex_dir, batch_size, hyper_model=False, output_domain='FREQ', enforce_dc=False,
+        use_gt_params=False, input_type = 'RAW'):
+    seq = MoCoDataSequence(ex_dir.decode('utf-8'), batch_size, hyper_model=hyper_model, output_domain=output_domain.decode('utf-8'), enforce_dc=enforce_dc,
+        use_gt_params=use_gt_params, input_type = input_type.decode('utf-8'))
+
+    while True:
+        i = np.random.randint(seq.__len__())
+        inputs, outputs = seq.__getitem__(i)
+        yield (inputs, outputs)
+
+def MoCoData(ex_dir, batch_size, hyper_model=False, output_domain='FREQ', enforce_dc=False,
+        use_gt_params=False, input_type = 'RAW'):
+    if(enforce_dc and not use_gt_params):
+        return tf.data.Dataset.from_generator(MoCoDataGenerator, 
+            args=[ex_dir, batch_size, hyper_model, output_domain, enforce_dc, use_gt_params, input_type],
+            output_types = ({'k_in':tf.float32},
+                            {'k_true': tf.float32, 'angle_true':tf.float32, 'num_pix_true': tf.float32, 'k_corrupt': tf.float32,
+                            'mapses': tf.complex64, 'order_kys': tf.float32, 'norms': tf.float32, 'sl': tf.string}))
+
+    else:
+        return tf.data.Dataset.from_generator(MoCoDataGenerator, 
+            args=[ex_dir, batch_size, hyper_model, output_domain, enforce_dc, use_gt_params, input_type],
+            output_types = ({'k_in':tf.float32, 'angles': tf.float32, 'num_pixes': tf.float32},
+                            {'k_true': tf.float32, 'angle_true':tf.float32, 'num_pix_true': tf.float32, 'k_corrupt': tf.float32,}))
+    
 
 
 if __name__ == "__main__":
