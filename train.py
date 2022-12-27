@@ -83,11 +83,8 @@ base_data_dir = exp_config.data_path
 train_dir = os.path.join(base_data_dir,'train')
 val_dir = os.path.join(base_data_dir,'val')
 
-train_data = multicoil_motion_simulator.MoCoData(train_dir,exp_config.batch_size,exp_config.hyp_model,exp_config.output_domain,exp_config.enforce_dc,exp_config.use_gt_params,exp_config.input_type)
-val_data = multicoil_motion_simulator.MoCoData(val_dir,exp_config.batch_size,exp_config.hyp_model,exp_config.output_domain,exp_config.enforce_dc,exp_config.use_gt_params,exp_config.input_type)
-
-train_data = train_data.prefetch(10)
-val_data = val_data.prefetch(10)
+train_data = multicoil_motion_simulator.MoCoDataGenerator(train_dir,exp_config.batch_size,exp_config.hyp_model,exp_config.output_domain,exp_config.enforce_dc,exp_config.use_gt_params,exp_config.input_type)
+val_data = multicoil_motion_simulator.MoCoDataGenerator(val_dir,exp_config.batch_size,exp_config.hyp_model,exp_config.output_domain,exp_config.enforce_dc,exp_config.use_gt_params,exp_config.input_type)
 
 input_shape = (None,None,2*exp_config.num_coils)
 model = models.get_motion_estimation_model(input_shape,
