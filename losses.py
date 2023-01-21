@@ -30,7 +30,7 @@ def prep_img_for_multicoil_loss(tensor):
     return tensor
 
 
-def multicoil_ssim(output_domain, num_coils, enforce_dc=False):
+def multicoil_ssim(output_domain, num_coils, ignore_border=False, enforce_dc=False):
     """Specifies a function which computes the appropriate loss function.
 
     Loss function here is SSIM on image-space data.
@@ -49,6 +49,10 @@ def multicoil_ssim(output_domain, num_coils, enforce_dc=False):
             y_true = prep_img_for_multicoil_loss(y_true)
             y_pred = prep_img_for_multicoil_loss(y_pred)
 
+            if(ignore_border):
+                y_true = y_true[:,10:-10,10:-10,:]
+                y_pred = y_pred[:,10:-10,10:-10,:]
+
             return -1 * tf.image.ssim(y_true, y_pred,
                                       max_val=K.max(y_true), filter_size=7)
         return image_ssim_multicoil
@@ -58,6 +62,10 @@ def multicoil_ssim(output_domain, num_coils, enforce_dc=False):
 
             y_true = prep_for_multicoil_loss(y_true)
             y_pred = prep_for_multicoil_loss(y_pred)
+
+            if(ignore_border):
+                y_true = y_true[:,10:-10,10:-10,:]
+                y_pred = y_pred[:,10:-10,10:-10,:]
 
             return -1 * tf.image.ssim(y_true, y_pred,
                                       max_val=K.max(y_true), filter_size=7)
