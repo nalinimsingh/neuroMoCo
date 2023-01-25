@@ -150,37 +150,12 @@ reduce_lr = ReduceLROnPlateau(
     verbose=2
 )
 
-if(not(exp_config.enforce_dc)):
-# Select loss
-    if(exp_config.loss_type == 'multicoil_ssim'):
-        used_loss = losses.multicoil_ssim(exp_config.output_domain,
-                exp_config.num_coils, exp_config.enforce_dc)
-    elif(exp_config.loss_type == 'multicoil_l1'):
-        used_loss = losses.multicoil_l1(exp_config.output_domain,
-                exp_config.num_coils)
 
-    # Setup model
-    multicoil_ssim = losses.multicoil_ssim(exp_config.output_domain,
-            exp_config.num_coils)
-    multicoil_l1 = losses.multicoil_l1(exp_config.output_domain,
-                exp_config.num_coils)
+lr = 1e-3
 
-    metrics = [multicoil_ssim, multicoil_l1]
-
-    lr = 1e-3
-
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(
-            lr=lr),
-        loss=used_loss,
-        metrics = metrics)
-
-else:
-    lr = 1e-3
-
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(
-            lr=lr))
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(
+        lr=lr))
 
 print('Compiled model')
 
