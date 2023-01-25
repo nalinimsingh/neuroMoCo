@@ -10,10 +10,10 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 # Constants
-BASE_DATA_DIR = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_smallmotions/train'
-BASE_HYPERMODEL_DIR = 'training/tanh_nonlinearity_noposembed/MOCO-44-True-INTERLACER_RESIDUAL-3-32-1-6-SSIM-FREQ-GRAPPA-FREQ-True-False-5000-6/'
-BASE_HYPERMODEL_EPOCH = 1500
-INFERENCE_RESULTS_DIR = os.path.join(BASE_HYPERMODEL_DIR, 'inference_results_weightedDCloss-ep'+str(BASE_HYPERMODEL_EPOCH))
+BASE_DATA_DIR = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_smallmotions/test'
+BASE_HYPERMODEL_DIR = 'training/parammatch_smallmotions/MOCO-44-True-INTERLACER_RESIDUAL-3-32-1-6-SSIM-FREQ-GRAPPA-FREQ-True-False-5000-6/'
+BASE_HYPERMODEL_EPOCH = 1800
+INFERENCE_RESULTS_DIR = os.path.join(BASE_HYPERMODEL_DIR, 'opt_TEST-inference_results_SGD_multiplerestarts-ep'+str(BASE_HYPERMODEL_EPOCH))
 N_SHOTS = 6
 N_COILS = 44
 
@@ -82,27 +82,24 @@ class CustomOptModel(keras.Model):
 
         forward, dc_loss = get_dc_loss(k_pred, k_corrupt, mapses, order_kys, angle_pred, num_pix_pred, norms)
 
-        k_corrupt_repeat = tf.repeat(tf.expand_dims(k_corrupt,-1),6,axis=-1)
-        forward_repeat = tf.repeat(tf.expand_dims(forward,-1),6,axis=-1)
-        a = tf.reduce_mean(tf.reduce_sum(tf.square(tf.abs(utils.join_reim_channels(tf.convert_to_tensor(k_corrupt_repeat*order_kys)))),axis=(1,2,3)),axis=0)
-        weights = 1/a
-        weights = weights/tf.reduce_sum(weights)
-        weights = weights[tf.newaxis,tf.newaxis,tf.newaxis,tf.newaxis,:]
-        weighted_dc_loss = tf.reduce_mean(tf.reduce_sum(weights*tf.square(tf.abs(utils.join_reim_channels(forward_repeat*order_kys) - utils.join_reim_channels(k_corrupt_repeat*order_kys))),axis=(1,2,3)),axis=0)
-        weighted_dc_loss = tf.reduce_sum(weighted_dc_loss)
-
         corr_signal_power = tf.reduce_mean(tf.reduce_sum(tf.square(tf.abs(utils.join_reim_channels(k_corrupt))),axis=(1,2,3)),axis=0)
         dc_loss_frac = dc_loss/corr_signal_power
         
         rot_loss = tf.reduce_mean(tf.abs(angle_pred - angle_true), axis=(0, 1))
         trans_loss = tf.reduce_mean(tf.abs(num_pix_pred - num_pix_true),axis=(0,1,2))
 
-        return ssim_loss, weighted_dc_loss, dc_loss, dc_loss_frac, rot_loss, trans_loss
+        rot_loss_first4 = tf.reduce_mean(tf.abs(angle_pred - angle_true)[:,:4], axis=(0, 1))
+        trans_loss_first4 = tf.reduce_mean(tf.abs(num_pix_pred - num_pix_true)[:,:4,:],axis=(0,1,2))
+
+        rot_loss_last2 = tf.reduce_mean(tf.abs(angle_pred - angle_true)[:,4:], axis=(0, 1))
+        trans_loss_last2 = tf.reduce_mean(tf.abs(num_pix_pred - num_pix_true)[:,4:,:],axis=(0,1,2))
+
+        return ssim_loss, k_pred, angle_pred, num_pix_pred, dc_loss, dc_loss_frac, rot_loss, rot_loss_first4, rot_loss_last2, trans_loss, trans_loss_first4, trans_loss_last2
 
     #@tf.function
     def train_step(self, data):
         with tf.GradientTape() as tape:
-            ssim_loss, weighted_dc_loss, dc_loss, dc_loss_frac, rot_loss, trans_loss = self.compute_losses(data, training=True)
+            ssim_loss, k_pred, angle_pred, num_pix_pred, dc_loss, dc_loss_frac, rot_loss, rot_loss_first4, rot_loss_last2, trans_loss, trans_loss_first4, trans_loss_last2 = self.compute_losses(data, training=True)
             loss = dc_loss
 
         # Compute gradients
@@ -115,11 +112,18 @@ class CustomOptModel(keras.Model):
         return {
             "loss": loss,
             "image_ssim_multicoil": ssim_loss,
+            "k_pred": k_pred,
             "dc": dc_loss,
             "dc_frac_loss": dc_loss_frac,
-            "weighted_dc": weighted_dc_loss,
+            "angle_pred": angle_pred,
+            "num_pix_pred": num_pix_pred,
             "rot": rot_loss,
-            "trans": trans_loss}
+            "rot_first4": rot_loss_first4,
+            "rot_last2": rot_loss_last2,
+            "trans": trans_loss,
+            "trans_first4": trans_loss_first4,
+            "trans_last2": trans_loss_last2,
+        }
 
 
 def img_generator(inputs, outputs):
