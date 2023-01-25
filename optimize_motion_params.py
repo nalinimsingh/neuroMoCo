@@ -151,7 +151,7 @@ def get_base_hypermodel(dir):
     model.load_weights(dir+'cp-'+epoch_str+'.ckpt')
     return model
 
-def optimize_example(test_gen, sl, model, epochs=200):
+def optimize_example(test_gen, sl, model, epochs=80):
     inputs, outputs = test_gen.__getitem__(None,sl=sl)
     k_grappa = inputs['k_grappa']
     k_nufft = inputs['k_nufft']
@@ -169,31 +169,25 @@ def optimize_example(test_gen, sl, model, epochs=200):
     inputs['ones'] = np.ones((1,1))
         
     backward_hnet = opt_model(model)
-    for i in range(1,7):
-        backward_hnet.layers[i].set_weights(np.zeros((1,1,2)))
-        backward_hnet.layers[i+6].set_weights(np.zeros((1,1,1)))
 
-
-    clr = tfa.optimizers.CyclicalLearningRate(initial_learning_rate=0.1,
-        maximal_learning_rate=1.0,
+    clr_s5 = tfa.optimizers.CyclicalLearningRate(initial_learning_rate=1e-7,
+        maximal_learning_rate=1e-6,
         scale_fn=lambda x: 1/(2.**(x-1)),
-        step_size=2)
+        step_size=5)
+
+    all_optimizers = [tf.keras.optimizers.SGD(clr_s5) for _ in range(4)]
     
     hist = []
+    for opt_i in range(len(all_optimizers)):
+        for i in range(1,7):
+            backward_hnet.layers[i].set_weights(np.zeros((1,1,2)))
+            backward_hnet.layers[i+6].set_weights(np.zeros((1,1,1)))
+            if(i==2):
+                backward_hnet.layers[i].trainable = False
+                backward_hnet.layers[i+6].trainable = False
+        backward_hnet.compile(all_optimizers[opt_i])
+        hist.append(backward_hnet.fit(img_generator(inputs, outputs),epochs=int(epochs), steps_per_epoch=1))
 
-    backward_hnet.compile(optimizer=tf.keras.optimizers.Adam(clr))
-    hist.append(backward_hnet.fit(img_generator(inputs, outputs),epochs=int(epochs), steps_per_epoch=1))
-    '''
-    for l in backward_hnet.layers:
-        l.trainable = False
-
-
-    for shot in [1,0,2,3,4,5]:
-        backward_hnet.layers[shot+1].trainable = True
-        backward_hnet.layers[shot+N_SHOTS+1].trainable = True
-        backward_hnet.compile(optimizer=tf.keras.optimizers.Adam(clr))
-        hist.append(backward_hnet.fit(img_generator(inputs, outputs),epochs=int(epochs/6), steps_per_epoch=1))
-    '''
     recons = {}
 
     recons['Corrupt'] = k_corrupt
@@ -201,10 +195,12 @@ def optimize_example(test_gen, sl, model, epochs=200):
     recons['ARC'] = k_grappa
     recons['Model-Based'] = k_nufft
 
-    back_outputs = backward_hnet(inputs)['k_pred']
-    angles_pred = backward_hnet(inputs)['angles']
-    num_pixes_pred = backward_hnet(inputs)['num_pixes']
-    recons['Hypernet-Optimized'] = back_outputs
+    opt_epoch_dcs = [hist[i].history["dc"][-1] for i in range(len(all_optimizers))]
+    opt_optimizer = np.argmin(opt_epoch_dcs)
+    opt_epoch = np.argmin(hist[opt_optimizer].history["dc"])
+    angles_pred = hist[opt_optimizer].history["angle_pred"][opt_epoch]
+    num_pixes_pred = hist[opt_optimizer].history["num_pix_pred"][opt_epoch]
+    recons['Hypernet-Optimized'] = hist[opt_optimizer].history["k_pred"][opt_epoch]
 
     zero_mot_inputs = inputs.copy()
     zero_mot_inputs['angles'] = np.zeros(inputs['angles'].shape)
@@ -216,7 +212,7 @@ def optimize_example(test_gen, sl, model, epochs=200):
     recons['Hypernet-GT'] = gt_outputs
 
     dc_losses = {}
-    dc_losses['Hypernet-Optimized'] = hist[-1].history['dc'][-1]
+    dc_losses['Hypernet-Optimized'] = hist[opt_optimizer].history['dc'][-1]
     dc_losses['GT'] = get_dc_loss(k_true, k_corrupt, mapses, order_kys, inputs['angles'], inputs['num_pixes'], norms)[1]
     dc_losses['Hypernet-GT'] = get_dc_loss(gt_outputs, k_corrupt, mapses, order_kys, inputs['angles'], inputs['num_pixes'], norms)[1]
     dc_losses['Model-Based'] = get_dc_loss(k_nufft, k_corrupt, mapses, order_kys, inputs['angles'], inputs['num_pixes'], norms)[1]
@@ -225,11 +221,11 @@ def optimize_example(test_gen, sl, model, epochs=200):
     ssim_results['Corrupt'] = get_np_ssim_loss(k_true, k_corrupt)
     ssim_results['ARC'] = get_np_ssim_loss(k_true, k_grappa)
     ssim_results['Model-Based'] = get_np_ssim_loss(k_true, k_nufft)
-    ssim_results['Hypernet-Optimized'] = hist[-1].history['image_ssim_multicoil'][-1]
+    ssim_results['Hypernet-Optimized'] = hist[opt_optimizer].history['image_ssim_multicoil'][-1]
     ssim_results['Hypernet-Zero'] = get_np_ssim_loss(k_true, zero_outputs)
     ssim_results['Hypernet-GT'] = get_np_ssim_loss(k_true, gt_outputs)
 
-    return backward_hnet, hist, recons, dc_losses, ssim_results, angles_true, angles_pred, num_pixes_true, num_pixes_pred, inputs['psx'], inputs['psy']
+    return backward_hnet, hist, opt_optimizer, recons, dc_losses, ssim_results, angles_true, angles_pred, num_pixes_true, num_pixes_pred, inputs['psx'], inputs['psy']
 
 if __name__ == "__main__":
     if not(os.path.exists(INFERENCE_RESULTS_DIR)):
@@ -241,12 +237,21 @@ if __name__ == "__main__":
 
     for sl in sls:
         if(not sl in os.listdir(INFERENCE_RESULTS_DIR)):
-            test_gen = multicoil_motion_simulator.MoCoDataSequence(BASE_DATA_DIR, 1, hyper_model=True, output_domain='FREQ', enforce_dc=True, use_gt_params=True, input_type='NUFFT',load_all_inputs=True)        
-            _, hist, recons, dc_losses, ssim_results, angles_true, angles_pred, num_pixes_true, num_pixes_pred, psx, psy = optimize_example(test_gen, sl, model)
-            rot_err_end = hist[-1].history['rot'][-1]
-            rot_err_start = hist[-1].history['rot'][0]
-            trans_err_end = hist[-1].history['trans'][-1]
-            trans_err_start = hist[-1].history['trans'][0]
+            test_gen = multicoil_motion_simulator.MoCoDataSequence(BASE_DATA_DIR, 1, hyper_model=True, output_domain='FREQ', enforce_dc=True, use_gt_params=True, input_type='NUFFT',load_all_inputs=True)      
+            _, hist, opt_optimizer, recons, dc_losses, ssim_results, angles_true, angles_pred, num_pixes_true, num_pixes_pred, psx, psy = optimize_example(test_gen, sl, model, epochs=80)
+            rot_err_end = hist[opt_optimizer].history['rot'][-1]
+            rot_err_start = hist[opt_optimizer].history['rot'][0]
+            rot_err_end_first4 = hist[opt_optimizer].history['rot_first4'][-1]
+            rot_err_start_first4 = hist[opt_optimizer].history['rot_first4'][0]
+            rot_err_end_last2 = hist[opt_optimizer].history['rot_last2'][-1]
+            rot_err_start_last2 = hist[opt_optimizer].history['rot_last2'][0]
+
+            trans_err_end = hist[opt_optimizer].history['trans'][-1]
+            trans_err_start = hist[opt_optimizer].history['trans'][0]
+            trans_err_end_first4 = hist[opt_optimizer].history['trans_first4'][-1]
+            trans_err_start_first4 = hist[opt_optimizer].history['trans_first4'][0]
+            trans_err_end_last2 = hist[opt_optimizer].history['trans_last2'][-1]
+            trans_err_start_last2 = hist[opt_optimizer].history['trans_last2'][0]
 
             sl_file = os.path.join(INFERENCE_RESULTS_DIR,sl)
             np.savez(sl_file, k_out = recons['GT'],
@@ -267,8 +272,16 @@ if __name__ == "__main__":
                             ssim_gthyper = ssim_results['Hypernet-GT'],
                             rot_err_end = rot_err_end,
                             rot_err_start = rot_err_start,
+                            rot_err_end_first4 = rot_err_end_first4,
+                            rot_err_end_last2 = rot_err_end_last2,
+                            rot_err_start_first4 = rot_err_start_first4,
+                            rot_err_start_last2 = rot_err_start_last2,                            
                             trans_err_end = trans_err_end,
                             trans_err_start = trans_err_start,
+                            trans_err_end_first4 = trans_err_end_first4,
+                            trans_err_end_last2 = trans_err_end_last2,
+                            trans_err_start_first4 = trans_err_start_first4,
+                            trans_err_start_last2 = trans_err_start_last2,  
                             angles_true = angles_true,
                             angles_pred = angles_pred,
                             num_pixes_true = num_pixes_true,
