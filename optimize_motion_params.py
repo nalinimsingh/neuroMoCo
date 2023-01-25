@@ -1,7 +1,8 @@
 from interlacer import utils
 import models, losses, multicoil_motion_simulator, diff_forward_model
 
-from random import shuffle
+import random
+
 from tensorflow import keras
 from tensorflow.keras.layers import *
 import numpy as np
@@ -232,10 +233,15 @@ if __name__ == "__main__":
         os.makedirs(INFERENCE_RESULTS_DIR)
 
     sls = os.listdir(BASE_DATA_DIR)
-    shuffle(sls)
+    random.Random(0).shuffle(sls)
     model = get_base_hypermodel(BASE_HYPERMODEL_DIR)
 
-    for sl in sls:
+    np.random.seed(0)
+    random.seed(0)
+    tf.random.set_seed(0)
+
+    for sl in sls[:100]:
+        tf.keras.backend.set_learning_phase(0)
         if(not sl in os.listdir(INFERENCE_RESULTS_DIR)):
             test_gen = multicoil_motion_simulator.MoCoDataSequence(BASE_DATA_DIR, 1, hyper_model=True, output_domain='FREQ', enforce_dc=True, use_gt_params=True, input_type='NUFFT',load_all_inputs=True)      
             _, hist, opt_optimizer, recons, dc_losses, ssim_results, angles_true, angles_pred, num_pixes_true, num_pixes_pred, psx, psy = optimize_example(test_gen, sl, model, epochs=80)
