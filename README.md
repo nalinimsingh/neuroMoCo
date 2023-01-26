@@ -1,8 +1,28 @@
-# dl-motion-correction
+# neuroMoCo
+Data-consistent deep rigid motion correction for brain MRI
+
+![Sample reconstruction results](./assets/teaser.png)
+
+## Dependencies
+All dependencies required to run this code are specified in `environment.yml`. To create an anaconda environment with those dependencies installed, run `conda env create --name <env> --file environment.yml`. 
+
+You will also need to add this repo and [interlacer](https://wwww.github.com/nalinimsingh/interlacer) to your python path (if you're using conda, `conda-develop /path/to/neuroMoCo/`).
+
+## Method Overview
+There are three codestreams involved in our method:
+
+1. [Simulation](#motion-simulation) of motion-corrupted examples
+2. [Training](#model-training) a model using the simulated data
+3. [Optimizing](#test-time-optimization) the motion parameter estimates.
 
 ## Motion Simulation
-A non-differentiable version of the motion simulator lives in `multicoil_motion_simulator.py`. 
-Running this file as a script runs the function `generate_all_motion_scripts`. This function generates simulated pairs of motion corrupted and corrected k-space data along with the corresponding motion parameters.
-The function writes these examples in .npz files.
+Unfortunately, we are unable to share our data and full data processing pipeline due to IRB restrictions. However, `multicoil_motion_simulator.py` contains a sample training generator which should give you an idea of how to write your own generator. Running this file will generate a folder containing .npz files used at training and test time. 
 
-A separate function within the same file, `generate_single_saved_motion_examples` produces a python generator which reads this data from the written .npz files and presents them in a format usable by the Keras `.fit_generator()` function.
+## Model Training
+The entry script to our model training is in `train.py`, which creates a model (defined in `models.py` and `hypermodels.py`) and trains the hypernetwork appropriately
+
+## Test-Time Optimization
+The test-time optimization code is found in `optimize_motion_params.py`, which can be run as a script to perform optimization on all the examples in a directory. Alternatively, `optimize_example()` can be called to run optimization on a single example. 
+
+
+
