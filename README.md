@@ -24,5 +24,15 @@ The entry script to our model training is in `training/train.py`, which creates 
 ## Test-Time Optimization
 The test-time optimization code is found in `optimization/optimize_motion_params.py`, which can be run as a script to perform optimization on all the examples in a directory. Alternatively, `optimize_example()` can be called to run optimization on a single example. 
 
+## Paper
+If you use the ideas or implementation in this repository, please cite our [paper](https://arxiv.org/abs/2301.10365):
 
+    @misc{singh2023data,
+        title={Data Consistent Deep Rigid MRI Motion Correction},
+        author={Nalini M. Singh and Neel Dey and Malte Hoffmann and Bruce Fischl and Elfar Adalsteinsson and Robert Frost and Adrian V. Dalca and Polina Golland},
+        year={2023},
+        eprint={2301.10365},
+        archivePrefix={arXiv},
+        primaryClass={eess.IV}
+    }     
 
