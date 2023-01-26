@@ -27,7 +27,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 
-import fastmri_data_generator, filepaths, losses, models, multicoil_motion_simulator, training_config
+import fastmri_data_generator, filepaths, training.losses as losses, training.models as models, motion_sim.multicoil_motion_simulator as multicoil_motion_simulator, training.training_config as training_config
 from interlacer import (layers, utils)
 from interlacer import losses as int_losses
 from scripts import load_model_utils

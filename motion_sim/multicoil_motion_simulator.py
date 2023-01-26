@@ -2,7 +2,7 @@ from random import sample, shuffle
 from scipy import ndimage, interpolate
 from tqdm import tqdm
 import csv
-import diff_forward_model, nufft_moco
+import motion_sim.diff_forward_model as diff_forward_model, motion_sim.nufft_moco as nufft_moco
 import multiprocessing
 import numpy as np
 import os
@@ -10,7 +10,7 @@ import tensorflow as tf
 from pydicom import read_file
 
 from interlacer import utils
-import diff_forward_model
+import motion_sim.diff_forward_model as diff_forward_model
 import mrimotion as mot
 import mghGErecon as ge
 

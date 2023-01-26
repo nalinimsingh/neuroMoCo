@@ -1,8 +1,5 @@
 configs/*
-training/*
-training_BACKUP/*
-OLD-configs/*
-OLD-training/*
+training_logs/*
 data/*
 *.pyc
 *.ipynb

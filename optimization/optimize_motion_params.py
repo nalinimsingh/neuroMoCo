@@ -1,5 +1,5 @@
 from interlacer import utils
-import models, losses, multicoil_motion_simulator, diff_forward_model
+import training.models as models, training.losses as losses, motion_sim.multicoil_motion_simulator as multicoil_motion_simulator, motion_sim.diff_forward_model as diff_forward_model
 
 import random
 
