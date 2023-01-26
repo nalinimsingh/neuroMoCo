@@ -219,12 +219,12 @@ def optimize_example(test_gen, sl, model, epochs=80):
     dc_losses['Model-Based'] = get_dc_loss(k_nufft, k_corrupt, mapses, order_kys, inputs['angles'], inputs['num_pixes'], norms)[1]
 
     ssim_results = {}
-    ssim_results['Corrupt'] = get_np_ssim_loss(k_true, k_corrupt)
-    ssim_results['ARC'] = get_np_ssim_loss(k_true, k_grappa)
-    ssim_results['Model-Based'] = get_np_ssim_loss(k_true, k_nufft)
-    ssim_results['Hypernet-Optimized'] = hist[opt_optimizer].history['image_ssim_multicoil'][-1]
-    ssim_results['Hypernet-Zero'] = get_np_ssim_loss(k_true, zero_outputs)
-    ssim_results['Hypernet-GT'] = get_np_ssim_loss(k_true, gt_outputs)
+    ssim_results['Corrupt'] = get_np_ssim_loss(k_true, k_corrupt, ignore_border=True)
+    ssim_results['ARC'] = get_np_ssim_loss(k_true, k_grappa, ignore_border=True)
+    ssim_results['Model-Based'] = get_np_ssim_loss(k_true, k_nufft, ignore_border=True)
+    ssim_results['Hypernet-Optimized'] = get_np_ssim_loss(k_true, recons['Hypernet-Optimized'], ignore_border=True)
+    ssim_results['Hypernet-Zero'] = get_np_ssim_loss(k_true, zero_outputs, ignore_border=True)
+    ssim_results['Hypernet-GT'] = get_np_ssim_loss(k_true, gt_outputs, ignore_border=True)
 
     return backward_hnet, hist, opt_optimizer, recons, dc_losses, ssim_results, angles_true, angles_pred, num_pixes_true, num_pixes_pred, inputs['psx'], inputs['psy']
 
