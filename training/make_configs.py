@@ -22,7 +22,7 @@ exp_name = 'sample_motion_exp'
 # Customizable fields
 tasks = ['MOCO']
 num_coilses = ['44']
-data_paths = ['/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_mediummotions']
+data_paths = [os.path.join(filepaths.DATA_DIR,'waltham_sim_mediummotions')]
 use_gt_paramses = ['True']
 architectures = [
     'INTERLACER_RESIDUAL']

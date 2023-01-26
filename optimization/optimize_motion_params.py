@@ -1,4 +1,5 @@
 from interlacer import utils
+import filepaths
 import training.models as models, training.losses as losses, motion_sim.multicoil_motion_simulator as multicoil_motion_simulator, motion_sim.diff_forward_model as diff_forward_model
 
 import random
@@ -11,8 +12,8 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 # Constants
-BASE_DATA_DIR = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_smallmotions/test'
-BASE_HYPERMODEL_DIR = 'training/parammatch_smallmotions/MOCO-44-True-INTERLACER_RESIDUAL-3-32-1-6-SSIM-FREQ-GRAPPA-FREQ-True-False-5000-6/'
+BASE_DATA_DIR = os.path.join(filepaths.DATA_DIR,'waltham_sim_smallmotions/test')
+BASE_HYPERMODEL_DIR = os.path.join(filepaths.TRAIN_DIR,'parammatch_smallmotions/MOCO-44-True-INTERLACER_RESIDUAL-3-32-1-6-SSIM-FREQ-GRAPPA-FREQ-True-False-5000-6/')
 BASE_HYPERMODEL_EPOCH = 1800
 INFERENCE_RESULTS_DIR = os.path.join(BASE_HYPERMODEL_DIR, 'opt_TEST-inference_results_SGD_multiplerestarts-ep'+str(BASE_HYPERMODEL_EPOCH))
 N_SHOTS = 6

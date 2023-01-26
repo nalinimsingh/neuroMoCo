@@ -1,5 +1,5 @@
 from interlacer import utils
-import models, losses, multicoil_motion_simulator, diff_forward_model
+import filepaths, models, losses, multicoil_motion_simulator, diff_forward_model
 
 from random import shuffle
 import numpy as np
@@ -7,10 +7,10 @@ import os
 import tensorflow as tf
 
 # Constants
-BASE_DATA_DIR = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_smallmotions/test'
-JOINTCONV_MODEL_DIR = 'training/parammatch_smallmotions/MOCO-44-False-INTERLACER_RESIDUAL-9-48-1-6-SSIM-FREQ-GRAPPA-FREQ-False-False-5000-6/'
+BASE_DATA_DIR = os.path.join(filepaths.DATA_DIR,'waltham_sim_smallmotions/test')
+JOINTCONV_MODEL_DIR = os.path.join(filepaths.TRAIN_DIR,'parammatch_smallmotions/MOCO-44-False-INTERLACER_RESIDUAL-9-48-1-6-SSIM-FREQ-GRAPPA-FREQ-False-False-5000-6/')
 JOINTCONV_MODEL_EPOCH = 1200
-BASE_HYPERMODEL_DIR = 'training/parammatch_smallmotions/MOCO-44-True-INTERLACER_RESIDUAL-3-32-1-6-SSIM-FREQ-GRAPPA-FREQ-True-False-5000-6/'
+BASE_HYPERMODEL_DIR = os.path.join(filepaths.TRAIN_DIR,'parammatch_smallmotions/MOCO-44-True-INTERLACER_RESIDUAL-3-32-1-6-SSIM-FREQ-GRAPPA-FREQ-True-False-5000-6/')
 INFERENCE_RESULTS_DIR = os.path.join(BASE_HYPERMODEL_DIR, 'opt_TEST-inference_results_SGD_multiplerestarts-ep'+str(1800))+'-recompute_ssim'
 N_SHOTS = 6
 N_COILS = 44

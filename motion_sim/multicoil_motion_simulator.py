@@ -2,6 +2,7 @@ from random import sample, shuffle
 from scipy import ndimage, interpolate
 from tqdm import tqdm
 import csv
+import filepaths
 import motion_sim.diff_forward_model as diff_forward_model, motion_sim.nufft_moco as nufft_moco
 import multiprocessing
 import numpy as np
@@ -190,7 +191,8 @@ def generate_motion_corrupted_brain_data(scan_list_path, maps_dir, write_path):
                     kspace_sl = kspace[:,:,sl,:44]
                     k = kspace_sl[...,np.newaxis].transpose(0,1,3,2)
  
-                    #maps = mot.coilsens.run_espirit(k, auto_calib=True)[:,:,0,:]
+                    # maps = mot.coilsens.run_espirit(k, auto_calib=True)[:,:,0,:]
+                    # Read previously computed maps
                     ex_arch = np.load(os.path.join(maps_dir, sl_str), allow_pickle=True)
                     maps = ex_arch['maps'][:,:,0,:]
 
@@ -260,9 +262,9 @@ def generate_motion_corrupted_brain_data(scan_list_path, maps_dir, write_path):
 
 
 def generate_all_motion_splits():
-    base_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_smallmotions'
-    split_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/data_splits_rl'
-    maps_dir = '/vast/kmotion2/users/nmsingh/dev/dl-motion-correction/data/waltham_sim_v1_multisim'
+    base_dir = os.path.join(filepaths.DATA_DIR, 'waltham_sim_smallmotions')
+    split_dir = os.path.join(filepaths.DATA_DIR, 'data_splits_rl')
+    maps_dir = os.path.join(filepaths.DATA_DIR, 'waltham_sim_v1_multisim')
 
     for split in ['train','val','test']:
         generate_motion_corrupted_brain_data(os.path.join(split_dir,split+'.csv'),
