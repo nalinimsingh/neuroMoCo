@@ -6,10 +6,9 @@ from tensorflow.keras.layers import *
 from tensorflow.keras.utils import get_custom_objects
 
 from interlacer import layers, utils
-import diff_forward_model
-import hypermodels
-import losses
-import multicoil_motion_simulator
+import motion_sim.diff_forward_model as diff_forward_model, motion_sim.multicoil_motion_simulator as multicoil_motion_simulator
+import training.hypermodels as hypermodels
+import training.losses as losses
 
 
 def reconstruct_rss(img_arr):

@@ -6,7 +6,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.layers import *
 
 from interlacer import utils
-import diff_forward_model
+import motion_sim.diff_forward_model as diff_forward_model
 
 
 def reconstruct_rss(img_arr):
