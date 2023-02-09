@@ -37,7 +37,7 @@ for exp_config in [i for i in os.listdir(
     log_path = os.path.join(
         experiment_path.replace(
             'configs/',
-            'training/'),
+            'training_logs/'),
         exp_config_name +
         '/log.txt')
 
