@@ -1,6 +1,7 @@
 import cv2
 import matplotlib
 from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from scipy.ndimage.interpolation import zoom
 import tensorflow as tf
@@ -134,11 +135,6 @@ def plot_img_from_k(k,axes=None,rotate=True,psx=None,psy=None,vmin=0,vmax=1):
         plt.setp(axes.spines.values(), visible=False)
         axes.tick_params(left=False, labelleft=False)
         axes.patch.set_visible(False)
-        from mpl_toolkits.axes_grid1 import make_axes_locatable
-        divider = make_axes_locatable(axes)
-        #cax = divider.append_axes('right', size='5%', pad=0.05)
-        fig = plt.gcf()
-        #fig.colorbar(im, cax=cax, orientation='vertical')
     else:
         plt.figure()
         plt.imshow(img,cmap='gray',vmin=vmin,vmax=vmax)
@@ -200,7 +196,7 @@ def plot_img_crop_ssim_from_k(k1,k2,x,y,dx,dy,axes=None,rotate=True,psx=None,psy
         plt.axis('off')
 
 
-def plot_img_diff_from_k(k1,k2,axes=None,rotate=True,psx=None,psy=None,vmin=-0.5,vmax=0.5):
+def plot_img_diff_from_k(k1,k2,axes=None,rotate=True,psx=None,psy=None,vmin=-0.5,vmax=0.5,plot_colorbar=False):
     img1 = rss_image_from_multicoil_k(k1)
     img2 = rss_image_from_multicoil_k(k2)
     if(rotate):
@@ -216,11 +212,13 @@ def plot_img_diff_from_k(k1,k2,axes=None,rotate=True,psx=None,psy=None,vmin=-0.5
         axes.tick_params(left=False, labelleft=False)
         axes.patch.set_visible(False)
         
-        from mpl_toolkits.axes_grid1 import make_axes_locatable
-        divider = make_axes_locatable(axes)
-        #cax = divider.append_axes('right', size='5%', pad=0.05)
-        fig = plt.gcf()
-        #fig.colorbar(im, cax=cax, orientation='vertical')
+        if(plot_colorbar):
+            divider = make_axes_locatable(axes)
+            cax = divider.append_axes('right', size='10%', pad=0)
+            cax.tick_params(labelsize=18)
+            fig = plt.gcf()
+            cb = fig.colorbar(im, cax=cax, orientation='vertical')
+            cb.ax.yaxis.set_ticks_position('left')
     else:
         plt.figure()
         plt.imshow(img1-img2,cmap='seismic',vmin=vmin,vmax=vmax)
@@ -351,7 +349,8 @@ def plot_comparison_results(ex_out, ex_in, recons, labels, ind, rotate=True, x=1
                     
         axes[0][i].set_title(title,fontsize=fontsize)
         plot_img_crop_from_k(to_plot[i],x,y,dx,dy,axes[1][i],rotate=rotate,psx=psx,psy=psy,vmin=vmin,vmax=vmax)
-        plot_img_diff_from_k(to_plot[i],to_plot[0],axes[2][i],rotate=rotate,psx=psx,psy=psy)
+        plot_colorbar = i==0
+        plot_img_diff_from_k(to_plot[i],to_plot[0],axes[2][i],rotate=rotate,psx=psx,psy=psy,plot_colorbar=plot_colorbar)
         plot_k(to_plot[i],axes[3][i])
         axes[3][i].set_aspect(psy/psx)
         if i==0:
