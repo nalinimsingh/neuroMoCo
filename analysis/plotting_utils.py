@@ -83,8 +83,8 @@ def plot_img(img, axes=None,rotate=True,psx=None,psy=None,vmin=0,vmax=1):
         
         
 def plot_img_diff(img1,img2,axes=None,rotate=True,psx=None,psy=None,vmin=-0.5,vmax=0.5):
-    img1 = rss_image_from_multicoil_img(img1,remove_outliers=True)
-    img2 = rss_image_from_multicoil_img(img2,remove_outliers=True)
+    img1 = rss_image_from_multicoil_img(img1)
+    img2 = rss_image_from_multicoil_img(img2)
     if(rotate):
         img1 = np.rot90(img1,k=3)
         img2 = np.rot90(img2,k=3)
@@ -121,8 +121,8 @@ def plot_phase_from_k(k,axes=None,rotate=True,psx=None,psy=None):
         plt.axis('off')
         
         
-def plot_img_from_k(k,axes=None,rotate=True,psx=None,psy=None,vmin=0,vmax=1,remove_outliers=False):
-    img = rss_image_from_multicoil_k(k,remove_outliers)
+def plot_img_from_k(k,axes=None,rotate=True,psx=None,psy=None,vmin=0,vmax=1):
+    img = rss_image_from_multicoil_k(k)
     if(rotate):
         img = np.rot90(img,k=3)
     if(psx is not None and psy is not None):
@@ -146,8 +146,8 @@ def plot_img_from_k(k,axes=None,rotate=True,psx=None,psy=None,vmin=0,vmax=1,remo
     return img
         
         
-def plot_img_crop_from_k(k,x,y,dx,dy,axes=None,rotate=True,psx=None,psy=None,vmin=0,vmax=1,remove_outliers=False):
-    img = rss_image_from_multicoil_k(k, remove_outliers=remove_outliers)
+def plot_img_crop_from_k(k,x,y,dx,dy,axes=None,rotate=True,psx=None,psy=None,vmin=0,vmax=1):
+    img = rss_image_from_multicoil_k(k)
     if(rotate):
         img = np.rot90(img,k=3)
     if(psx is not None and psy is not None):
@@ -164,9 +164,9 @@ def plot_img_crop_from_k(k,x,y,dx,dy,axes=None,rotate=True,psx=None,psy=None,vmi
         plt.axis('off')
 
         
-def plot_img_crop_diff_from_k(k1,k2,x,y,dx,dy,axes=None,rotate=True,psx=None,psy=None,vmin=-0.5,vmax=0.5,remove_outliers=False):
-    img1 = rss_image_from_multicoil_k(k1,remove_outliers=remove_outliers)
-    img2 = rss_image_from_multicoil_k(k2,remove_outliers=remove_outliers)  
+def plot_img_crop_diff_from_k(k1,k2,x,y,dx,dy,axes=None,rotate=True,psx=None,psy=None,vmin=-0.5,vmax=0.5):
+    img1 = rss_image_from_multicoil_k(k1)
+    img2 = rss_image_from_multicoil_k(k2)
     if(rotate):
         img1 = np.rot90(img1,k=3)
         img2 = np.rot90(img2,k=3)
@@ -182,9 +182,9 @@ def plot_img_crop_diff_from_k(k1,k2,x,y,dx,dy,axes=None,rotate=True,psx=None,psy
         plt.axis('off')
 
 
-def plot_img_crop_ssim_from_k(k1,k2,x,y,dx,dy,axes=None,rotate=True,psx=None,psy=None,remove_outliers=False):
-    img1 = rss_image_from_multicoil_k(k1,remove_outliers=remove_outliers)
-    img2 = rss_image_from_multicoil_k(k2,remove_outliers=remove_outliers)  
+def plot_img_crop_ssim_from_k(k1,k2,x,y,dx,dy,axes=None,rotate=True,psx=None,psy=None):
+    img1 = rss_image_from_multicoil_k(k1)
+    img2 = rss_image_from_multicoil_k(k2)
     if(rotate):
         img1 = np.rot90(img1,k=3)
         img2 = np.rot90(img2,k=3)
@@ -200,9 +200,9 @@ def plot_img_crop_ssim_from_k(k1,k2,x,y,dx,dy,axes=None,rotate=True,psx=None,psy
         plt.axis('off')
 
 
-def plot_img_diff_from_k(k1,k2,axes=None,rotate=True,psx=None,psy=None,vmin=-0.5,vmax=0.5,remove_outliers=False):
-    img1 = rss_image_from_multicoil_k(k1,remove_outliers=remove_outliers)
-    img2 = rss_image_from_multicoil_k(k2,remove_outliers=remove_outliers)    
+def plot_img_diff_from_k(k1,k2,axes=None,rotate=True,psx=None,psy=None,vmin=-0.5,vmax=0.5):
+    img1 = rss_image_from_multicoil_k(k1)
+    img2 = rss_image_from_multicoil_k(k2)
     if(rotate):
         img1 = np.rot90(img1,k=3)
         img2 = np.rot90(img2,k=3)
@@ -227,9 +227,9 @@ def plot_img_diff_from_k(k1,k2,axes=None,rotate=True,psx=None,psy=None,vmin=-0.5
         plt.axis('off')
 
         
-def plot_img_ssim_from_k(k1,k2,axes=None,rotate=True,psx=None,psy=None,remove_outliers=False):
-    img1 = rss_image_from_multicoil_k(k1,remove_outliers=remove_outliers)
-    img2 = rss_image_from_multicoil_k(k2,remove_outliers=remove_outliers)
+def plot_img_ssim_from_k(k1,k2,axes=None,rotate=True,psx=None,psy=None):
+    img1 = rss_image_from_multicoil_k(k1)
+    img2 = rss_image_from_multicoil_k(k2)
     if(rotate):
         img1 = np.rot90(img1,k=3)
         img2 = np.rot90(img2,k=3)
@@ -296,7 +296,7 @@ def plot_k_diff(k1, k2, axes=None, rotate=True, vmin=-20,vmax=20):
         plt.axis('off')
         
         
-def plot_comparison_results(ex_out, ex_in, recons, labels, ind, rotate=True, x=100, y=200, dx=128, dy=128, psx=None, psy=None, vmin=0, vmax=1, fontsize=22, print_ssim = True, remove_outliers=True):
+def plot_comparison_results(ex_out, ex_in, recons, labels, ind, rotate=True, x=100, y=200, dx=128, dy=128, psx=None, psy=None, vmin=0, vmax=1, fontsize=22, print_ssim = True):
     if(psx == None):
         psx = 1
     if(psy == None):
@@ -336,7 +336,7 @@ def plot_comparison_results(ex_out, ex_in, recons, labels, ind, rotate=True, x=1
         psy = hold
     to_plot_imgs = []
     for i in range(n+2):
-        img = plot_img_from_k(to_plot[i],axes[0][i],rotate=rotate,psx=psx,psy=psy,vmin=vmin,vmax=vmax,remove_outliers=remove_outliers)
+        img = plot_img_from_k(to_plot[i],axes[0][i],rotate=rotate,psx=psx,psy=psy,vmin=vmin,vmax=vmax)
         to_plot_imgs.extend([img])
         
         title = titles[i]
@@ -350,8 +350,8 @@ def plot_comparison_results(ex_out, ex_in, recons, labels, ind, rotate=True, x=1
                 title += '\n MSE: %.5f' % mse
                     
         axes[0][i].set_title(title,fontsize=fontsize)
-        plot_img_crop_from_k(to_plot[i],x,y,dx,dy,axes[1][i],rotate=rotate,psx=psx,psy=psy,vmin=vmin,vmax=vmax, remove_outliers=remove_outliers)
-        plot_img_diff_from_k(to_plot[i],to_plot[0],axes[2][i],rotate=rotate,psx=psx,psy=psy,remove_outliers=remove_outliers)
+        plot_img_crop_from_k(to_plot[i],x,y,dx,dy,axes[1][i],rotate=rotate,psx=psx,psy=psy,vmin=vmin,vmax=vmax)
+        plot_img_diff_from_k(to_plot[i],to_plot[0],axes[2][i],rotate=rotate,psx=psx,psy=psy)
         plot_k(to_plot[i],axes[3][i])
         axes[3][i].set_aspect(psy/psx)
         if i==0:
