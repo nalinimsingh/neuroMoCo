@@ -25,6 +25,7 @@ def get_multicoil_interlacer_model(
         num_layers,
         num_coils,
         hyp_model=False,
+        motinp_model=False,
         n_units=256,
         output_domain='FREQ'):
     """Interlacer model with residual convolutions.
@@ -41,6 +42,7 @@ def get_multicoil_interlacer_model(
       num_layers(int): Number of convolutional layers in model
       num_coils(int): Number of coils in k-space data
       hyp_model(Bool): Whether to use a hypernetwork controlled by motion params
+      motinp_model(Bool): Whether to use motion parameters as additional inputs to the model
       n_units(int): Number of units in the intermediate layers of hypernetwork MLP
 
     Returns:
@@ -53,12 +55,16 @@ def get_multicoil_interlacer_model(
         hyp_input = hyp_net.input
         hyp_tensor = hyp_net.output
         m_inputs = (inputs, hyp_input)
+    elif(motinp_model):
+        mot_input = Input(shape=[18])  
+        m_inputs = (inputs, mot_input)
     else:
         hyp_tensor = None
         m_inputs = inputs
 
+    l_inputs = m_inputs if hyp_model else inputs
     inp_conv = layers.BatchNormConv(
-        num_features, 1, hyp_conv=hyp_model)(m_inputs)
+        num_features, 1, hyp_conv=hyp_model)(l_inputs)
 
     inp_img = utils.convert_channels_to_image_domain(inputs)
     inp_img_unshift = tf.signal.ifftshift(inp_img, axes=(1, 2))
@@ -71,6 +77,10 @@ def get_multicoil_interlacer_model(
 
     freq_in = inputs
     img_in = inp_img
+
+    if(motinp_model):
+        freq_in = Concatenate()([freq_in,tf.tile(tf.expand_dims(tf.expand_dims(mot_input,1),1),[1,tf.shape(inputs)[1],tf.shape(inputs)[2],1])])
+        img_in = Concatenate()([img_in,tf.tile(tf.expand_dims(tf.expand_dims(mot_input,1),1),[1,tf.shape(inputs)[1],tf.shape(inputs)[2],1])])
 
     for i in range(num_layers):
         if(hyp_model):
@@ -184,6 +194,7 @@ def get_motion_estimation_model(
         num_coils,
         n_units=256,
         hyp_model=False,
+        motinp_model=False,
         output_domain='FREQ',
         use_gt_params=False):
 
@@ -193,7 +204,7 @@ def get_motion_estimation_model(
         angle_true = Input((6),name='angle_true')
         num_pix_true = Input((6, 2),name='num_pix_true')
 
-    if(hyp_model):        
+    if(hyp_model or motinp_model):        
         if(not use_gt_params):
             n = tf.shape(inputs)[1]
             inp_real = tf.expand_dims(inputs[:, :, :, 0], -1)
@@ -245,12 +256,13 @@ def get_motion_estimation_model(
         num_layers,
         num_coils,
         hyp_model=hyp_model,
+        motinp_model=motinp_model,
         n_units=n_units,
         output_domain=output_domain)
 
     correction_model.compile()
 
-    if(hyp_model):
+    if(hyp_model or motinp_model):
         recon_output = correction_model((inputs, motion_params))
     else:
         recon_output = correction_model(inputs)
@@ -261,7 +273,7 @@ def get_motion_estimation_model(
     if(use_gt_params):
         inputs['angles'] = angle_true
         inputs['num_pixes'] = num_pix_true
-    elif(hyp_model):
+    elif(hyp_model or motinp_model):
         outputs['angles'] = angle_pred
         outputs['num_pixes'] = num_pix_pred
     

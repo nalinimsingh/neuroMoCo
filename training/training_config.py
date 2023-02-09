@@ -92,6 +92,8 @@ class TrainingConfig:
             config, 'MODEL', 'enforce_dc', 'bool')
         self.hyp_model = read_or_default(
             config, 'MODEL', 'hyp_model', 'bool', False)
+        self.motinp_model = read_or_default(
+            config, 'MODEL', 'motinp_model', 'bool', False)
 
         self.num_epochs = read_or_default(
             config, 'TRAINING', 'num_epochs', 'int')
@@ -116,6 +118,7 @@ class TrainingConfig:
                 self.input_type,
                 self.output_domain,
                 self.hyp_model,
+                self.motinp_model,
                 self.enforce_dc,
                 self.num_epochs,
                 self.batch_size]:

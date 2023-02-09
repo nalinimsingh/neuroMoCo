@@ -94,6 +94,7 @@ model = models.get_motion_estimation_model(input_shape,
         exp_config.num_layers,
         exp_config.num_coils,
         hyp_model=exp_config.hyp_model,
+        motinp_model=exp_config.motinp_model,
         output_domain=exp_config.output_domain,
         use_gt_params=exp_config.use_gt_params)
 

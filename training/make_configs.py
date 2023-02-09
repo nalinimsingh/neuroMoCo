@@ -35,14 +35,15 @@ input_domains = ['FREQ']
 input_types = ['RAW','GRAPPA']
 output_domains = ['FREQ']
 hyp_models = ['True','False']
+motinp_models = ['True','False']
 enforce_dcs = ['False']
 
 num_epochses = ['5000']
 batch_sizes = ['6']
 
 
-for task, num_coils, data_path, use_gt_params, architecture, kernel_size, num_features, num_convs, num_layers, loss, input_domain, input_type, output_domain, hyp_model, enforce_dc, num_epochs, batch_size in itertools.product(
-        tasks, num_coilses, data_paths, use_gt_paramses, architectures, kernel_sizes, num_featureses, num_convses, num_layerses, losses, input_domains, input_types, output_domains, hyp_models, enforce_dcs, num_epochses, batch_sizes):
+for task, num_coils, data_path, use_gt_params, architecture, kernel_size, num_features, num_convs, num_layers, loss, input_domain, input_type, output_domain, hyp_model, motinp_model, enforce_dc, num_epochs, batch_size in itertools.product(
+        tasks, num_coilses, data_paths, use_gt_paramses, architectures, kernel_sizes, num_featureses, num_convses, num_layerses, losses, input_domains, input_types, output_domains, hyp_models, motinp_models, enforce_dcs, num_epochses, batch_sizes):
     
     base_dir = os.path.join(filepaths.CONFIG_DIR, exp_name)
     
@@ -63,6 +64,7 @@ for task, num_coils, data_path, use_gt_params, architecture, kernel_size, num_fe
                 input_type,
                 output_domain,
                 hyp_model,
+                motinp_model,
                 enforce_dc,
                 num_epochs,
                 batch_size]:
@@ -95,6 +97,7 @@ for task, num_coils, data_path, use_gt_params, architecture, kernel_size, num_fe
         f.write('input_type = ' + input_type + '\n')
         f.write('output_domain = ' + output_domain + '\n')
         f.write('hyp_model = ' + hyp_model + '\n')
+        f.write('motinp_model = ' + motinp_model + '\n')
         f.write('enforce_dc = ' + enforce_dc + '\n')
 
         f.write('\n')
