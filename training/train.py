@@ -110,7 +110,7 @@ if(suffix is not None):
 dir_path = filepaths.TRAIN_DIR
 
 if(experiment is not None and not debug):
-    dir_path += experiment + '/'
+    dir_path = os.path.join(dir_path,experiment) + '/'
 checkpoint_dir = os.path.join(dir_path, job_name)
 checkpoint_name = 'cp-{epoch:04d}.ckpt'
 checkpoint_path = os.path.join(checkpoint_dir, checkpoint_name)
