@@ -9,13 +9,30 @@ import numpy as np
 import os
 import tensorflow as tf
 from pydicom import read_file
+import pygrappa
 
 from interlacer import utils
 import motion_sim.diff_forward_model as diff_forward_model
 import mrimotion as mot
-import mghGErecon as ge
 
 N_SHOTS = 6
+
+def run_grappa(kspace):
+    k_line = kspace[0,:,0]
+
+    # Find the index of the midpoint
+    midpoint_index = len(k_line) // 2
+
+    # Find the start index of the contiguous nonzero elements
+    acs_start = midpoint_index - np.argmax(k_line[:midpoint_index][::-1] == 0)
+
+    # Find the end index of the contiguous nonzero elements
+    acs_end = midpoint_index + np.argmax(k_line[midpoint_index:] == 0)
+
+    grappa = pygrappa.grappa(kspace,kspace[:,acs_start:acs_end,:])
+
+    return grappa
+
 
 def get_edge_multiplier(shape):
     rows = np.zeros(shape).T
@@ -238,7 +255,7 @@ def generate_motion_corrupted_brain_data(scan_list_path, maps_dir, write_path):
                         shot_order_ky[:,:,shot,:,shot_i] = 1.0
 
                     mapses = np.expand_dims(ext_maps,0)
-                    k_grappa = ge.recon.recon_arc_kspace(utils.join_reim_channels(tf.convert_to_tensor(k_corrupt))[0,...],acq_path)
+                    k_grappa = run_grappa(utils.join_reim_channels(tf.convert_to_tensor(k_corrupt))[0,...])
                     k_grappa = utils.split_reim_channels(tf.expand_dims(k_grappa,0))
                     
                     k_nufft = nufft_moco.nufft_moco(k_grappa, mapses, shot_order_ky, rel_angle, rel_num_pix, use_grappa_interp=True)                    
